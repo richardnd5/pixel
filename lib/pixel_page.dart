@@ -36,6 +36,7 @@ class _PixelPageState extends State<PixelPage> {
   }
 
   _tapUp(TapUpDetails details) {
+    print('tap up position ${details.localPosition}');
     getDotAtPosition(details);
   }
 
