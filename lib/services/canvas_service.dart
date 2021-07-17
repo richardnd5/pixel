@@ -62,6 +62,7 @@ class CanvasService extends ChangeNotifier {
 
   clearCanvas() {
     _currentCanvas = [];
+    createBlankCanvas();
     notifyListeners();
   }
 
