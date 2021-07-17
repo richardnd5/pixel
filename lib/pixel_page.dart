@@ -38,6 +38,36 @@ class _PixelPageState extends State<PixelPage> {
         .toggleShowPreviousFrame();
   }
 
+  playPressed() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Provider.of<CanvasService>(context, listen: false).playArrayOfCanvases();
+  }
+
+  clearAnimationPressed() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Are you sure you want to clear the animation?'),
+        actions: [
+          TextButton(
+            child: Text('No'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          TextButton(
+            child: Text('Yes'),
+            onPressed: () {
+              Provider.of<CanvasService>(context, listen: false)
+                  .clearAnimation();
+              showSnackBar(context, 'Animation Cleared');
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -49,39 +79,37 @@ class _PixelPageState extends State<PixelPage> {
               padding: EdgeInsets.zero,
               children: [
                 ListTile(
-                  title: Container(
-                    width: 80,
-                    child: Row(
-                      children: [
-                        Switch(
-                          value:
-                              context.watch<CanvasService>().saveOnEachChange,
-                          onChanged: (_) => saveOnChangeToggle(),
-                        ),
-                        Text(
-                          'Save On Change',
-                        ),
-                      ],
-                    ),
+                  title: Row(
+                    children: [
+                      Switch(
+                        value: context.watch<CanvasService>().saveOnEachChange,
+                        onChanged: (_) => saveOnChangeToggle(),
+                      ),
+                      Text('Save On Change'),
+                    ],
                   ),
                 ),
                 ListTile(
-                  title: Container(
-                    width: 80,
-                    child: Row(
-                      children: [
-                        Switch(
-                          value:
-                              context.watch<CanvasService>().showPreviousFrame,
-                          onChanged: (_) => toggleShowPreviousFrame(),
-                        ),
-                        Text(
-                          'Show Previous Frame',
-                        ),
-                      ],
-                    ),
+                  title: Row(
+                    children: [
+                      Switch(
+                        value: context.watch<CanvasService>().showPreviousFrame,
+                        onChanged: (_) => toggleShowPreviousFrame(),
+                      ),
+                      Text('Show Previous Frame'),
+                    ],
                   ),
                 ),
+                ListTile(
+                  title: Text('Clear Animation'),
+                  leading: ElevatedButton(
+                    style: ButtonStyle(
+                        backgroundColor: MaterialStateProperty.resolveWith(
+                            (states) => Colors.red)),
+                    onPressed: clearAnimationPressed,
+                    child: Icon(Icons.delete_forever),
+                  ),
+                )
               ],
             ),
           ),
@@ -91,12 +119,7 @@ class _PixelPageState extends State<PixelPage> {
               style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.resolveWith(
                       (states) => Colors.green)),
-              onPressed: () {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                Provider.of<CanvasService>(context, listen: false)
-                    .playArrayOfCanvases();
-              },
-              // child: Text('Play all canvases', style: TextStyle(fontSize: 8)),
+              onPressed: playPressed,
               child: Icon(Icons.play_arrow),
             ),
             ElevatedButton(
@@ -109,37 +132,6 @@ class _PixelPageState extends State<PixelPage> {
                     .clearCanvas();
               },
               child: Icon(Icons.delete),
-            ),
-            ElevatedButton(
-              style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith(
-                      (states) => Colors.red)),
-              onPressed: () {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title:
-                        Text('Are you sure you want to clear the animation?'),
-                    actions: [
-                      TextButton(
-                        child: Text('No'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      TextButton(
-                        child: Text('Yes'),
-                        onPressed: () {
-                          Provider.of<CanvasService>(context, listen: false)
-                              .clearAnimation();
-                          showSnackBar(context, 'Animation Cleared');
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-              child: Icon(Icons.delete_forever),
             ),
             ElevatedButton(onPressed: savePressed, child: Text('Save')),
           ],
