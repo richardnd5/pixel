@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-
 import 'package:pixel/pixel_page.dart';
 import 'package:pixel/services/canvas_service.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +13,7 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(),
       home: ChangeNotifierProvider(
         create: (_) => CanvasService(),
         child: PixelPage(),

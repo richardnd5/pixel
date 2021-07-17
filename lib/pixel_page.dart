@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pixel/services/canvas_service.dart';
+import 'package:pixel/show_snack_bar.dart';
 import 'package:provider/provider.dart';
 import 'my_painter.dart';
 
@@ -19,31 +20,146 @@ class _PixelPageState extends State<PixelPage> {
     });
   }
 
+  savePressed() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    showSnackBar(
+        context,
+        Provider.of<CanvasService>(context, listen: false).saveCurrentCanvas()
+            ? 'Canvas Saved'
+            : 'Already Saved');
+  }
+
+  saveOnChangeToggle() {
+    Provider.of<CanvasService>(context, listen: false).toggleSaveOnEachChange();
+  }
+
+  toggleShowPreviousFrame() {
+    Provider.of<CanvasService>(context, listen: false)
+        .toggleShowPreviousFrame();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      persistentFooterButtons: [
-        ElevatedButton(
-          onPressed:
-              Provider.of<CanvasService>(context, listen: false).clearCanvas,
-          child: Text('Clear'),
-        )
-      ],
-      body: Center(
-        child: SafeArea(
-          child: Center(
-            child: InteractiveViewer(
-              constrained: false,
-              minScale: 0.01,
-              maxScale: 50,
-              child: GestureDetector(
-                onTapUp: (details) =>
-                    Provider.of<CanvasService>(context, listen: false)
-                        .tapUp(details.localPosition),
-                child: CustomPaint(
-                  size: Size(5000, 5000),
-                  painter:
-                      MyPainter(context.watch<CanvasService>().currentCanvas),
+    return Container(
+      color: Theme.of(context).backgroundColor,
+      child: SafeArea(
+        child: Scaffold(
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                ListTile(
+                  title: Container(
+                    width: 80,
+                    child: Row(
+                      children: [
+                        Switch(
+                          value:
+                              context.watch<CanvasService>().saveOnEachChange,
+                          onChanged: (_) => saveOnChangeToggle(),
+                        ),
+                        Text(
+                          'Save On Change',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                ListTile(
+                  title: Container(
+                    width: 80,
+                    child: Row(
+                      children: [
+                        Switch(
+                          value:
+                              context.watch<CanvasService>().showPreviousFrame,
+                          onChanged: (_) => toggleShowPreviousFrame(),
+                        ),
+                        Text(
+                          'Show Previous Frame',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          appBar: AppBar(),
+          persistentFooterButtons: [
+            ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.green)),
+              onPressed: () {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                Provider.of<CanvasService>(context, listen: false)
+                    .playArrayOfCanvases();
+              },
+              // child: Text('Play all canvases', style: TextStyle(fontSize: 8)),
+              child: Icon(Icons.play_arrow),
+            ),
+            ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.red)),
+              onPressed: () {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                Provider.of<CanvasService>(context, listen: false)
+                    .clearCanvas();
+              },
+              child: Icon(Icons.delete),
+            ),
+            ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.red)),
+              onPressed: () {
+                ScaffoldMessenger.of(context).clearSnackBars();
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title:
+                        Text('Are you sure you want to clear the animation?'),
+                    actions: [
+                      TextButton(
+                        child: Text('No'),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      TextButton(
+                        child: Text('Yes'),
+                        onPressed: () {
+                          Provider.of<CanvasService>(context, listen: false)
+                              .clearAnimation();
+                          showSnackBar(context, 'Animation Cleared');
+                          Navigator.pop(context);
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Icon(Icons.delete_forever),
+            ),
+            ElevatedButton(onPressed: savePressed, child: Text('Save')),
+          ],
+          body: Center(
+            child: SafeArea(
+              child: Center(
+                child: InteractiveViewer(
+                  constrained: false,
+                  minScale: 0.01,
+                  maxScale: 50,
+                  child: GestureDetector(
+                    onTapUp: (details) =>
+                        Provider.of<CanvasService>(context, listen: false)
+                            .tapUp(details.localPosition),
+                    child: CustomPaint(
+                      size: Size(5000, 5000),
+                      painter: MyPainter(
+                          context.watch<CanvasService>().currentCanvas.dots),
+                    ),
+                  ),
                 ),
               ),
             ),

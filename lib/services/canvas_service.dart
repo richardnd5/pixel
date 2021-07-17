@@ -1,9 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:pixel/my_painter.dart';
 
+class Canvas {
+  List<Dot> dots;
+  String name;
+  Color dotsColor;
+
+  Canvas({
+    required this.name,
+    required this.dots,
+    required this.dotsColor,
+  });
+
+  Canvas.clone(Canvas canvas)
+      : this.dots = canvas.dots
+            .map<Dot>((e) => new Dot(
+                  color: e.color,
+                  gridPos: e.gridPos,
+                  on: e.on,
+                  number: e.number,
+                  size: e.size,
+                ))
+            .toList(),
+        this.name = canvas.name,
+        this.dotsColor = canvas.dotsColor;
+}
+
 class CanvasService extends ChangeNotifier {
-  List<Dot> get currentCanvas => _currentCanvas;
-  List<Dot> _currentCanvas = [];
+  Canvas get currentCanvas => _currentCanvas;
+  Canvas _currentCanvas =
+      Canvas(name: 'noodle', dots: [], dotsColor: Colors.black);
+  bool _canvasSaved = false;
   double get squareSize => _squareSize;
   late double _squareSize;
 
@@ -13,18 +40,37 @@ class CanvasService extends ChangeNotifier {
   bool get loading => _loading;
   bool _loading = false;
 
-  List<List<Dot>> get savedCanvases => _savedCanvases;
-  List<List<Dot>> _savedCanvases = [];
+  List<Canvas> get savedCanvases => _savedCanvases;
+  List<Canvas> _savedCanvases = [];
+
+  bool get saveOnEachChange => _saveOnEachChange;
+  bool _saveOnEachChange = true;
+
+  bool get showPreviousFrame => _showPreviousFrame;
+  bool _showPreviousFrame = false;
+
+  toggleShowPreviousFrame() {
+    _showPreviousFrame = !_showPreviousFrame;
+    notifyListeners();
+  }
+
+  toggleSaveOnEachChange() {
+    _saveOnEachChange = !_saveOnEachChange;
+    notifyListeners();
+  }
 
   tapUp(Offset localPosition) => _getDotAtPosition(localPosition);
 
   _getDotAtPosition(Offset localPosition) {
-    var foundDot = _currentCanvas.firstWhere(
+    var foundDot = _currentCanvas.dots.firstWhere(
         (dot) => tapWithinOffset(localPosition, dot.gridPos!, squareSize),
         orElse: () =>
             Dot(color: Colors.black, gridPos: null, on: false, number: 0));
     if (foundDot.gridPos != null) {
       foundDot.on = !foundDot.on;
+      _canvasSaved = false;
+      if (saveOnEachChange) saveCurrentCanvas();
+
       notifyListeners();
     }
   }
@@ -47,7 +93,7 @@ class CanvasService extends ChangeNotifier {
         var color = Colors.black;
 
         Offset gridPos = Offset(xPos, yPos);
-        _currentCanvas.add(Dot(
+        _currentCanvas.dots.add(Dot(
             color: color,
             gridPos: gridPos,
             on: false,
@@ -61,26 +107,52 @@ class CanvasService extends ChangeNotifier {
   }
 
   clearCanvas() {
-    _currentCanvas = [];
+    _currentCanvas = Canvas(
+      name: 'noodle',
+      dots: [],
+      dotsColor: Colors.black,
+    );
+    _canvasSaved = false;
     createBlankCanvas();
     notifyListeners();
   }
 
-  saveCanvas(List<Dot> canvas) {
-    savedCanvases.add(canvas);
-  }
-
-  loadCanvas(List<Dot> canvas) {
+  clearAnimation() {
+    _currentCanvas = Canvas(
+      name: 'noodle',
+      dots: [],
+      dotsColor: Colors.black,
+    );
+    _canvasSaved = false;
+    _savedCanvases = [];
+    createBlankCanvas();
     notifyListeners();
   }
 
-  playArrayOfCanvases(Duration frameRate, List<List<Dot>> frames) {
+  bool saveCurrentCanvas() {
+    if (!_canvasSaved && _currentCanvas.dots.isNotEmpty) {
+      _canvasSaved = true;
+
+      var secondList = new Canvas.clone(_currentCanvas);
+      savedCanvases.add(secondList);
+      return true;
+    }
+    return false;
+  }
+
+  loadCanvas(List<Dot> canvas) {
+    _canvasSaved = false;
+    notifyListeners();
+  }
+
+  playArrayOfCanvases(
+      {Duration frameRate = const Duration(milliseconds: 100)}) async {
     _playingAnimation = true;
-    frames.forEach((canvas) async {
+    for (var canvas in _savedCanvases) {
       _currentCanvas = canvas;
-      await Future.delayed(frameRate);
       notifyListeners();
-    });
+      await Future.delayed(frameRate);
+    }
     _playingAnimation = false;
   }
 }
