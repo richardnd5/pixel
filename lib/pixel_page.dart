@@ -68,8 +68,21 @@ class _PixelPageState extends State<PixelPage> {
     );
   }
 
+  clearCanvasPressed() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    Provider.of<CanvasService>(context, listen: false).clearCanvas();
+  }
+
+  handleCanvasTap(TapUpDetails details) {
+    Provider.of<CanvasService>(context, listen: false)
+        .checkTapPosition(details.localPosition);
+  }
+
   @override
   Widget build(BuildContext context) {
+    var service = context.watch<CanvasService>();
+    bool saveOnEachChange = service.saveOnEachChange;
+    bool showPreviousFrame = service.showPreviousFrame;
     return Container(
       color: Theme.of(context).backgroundColor,
       child: SafeArea(
@@ -82,7 +95,7 @@ class _PixelPageState extends State<PixelPage> {
                   title: Row(
                     children: [
                       Switch(
-                        value: context.watch<CanvasService>().saveOnEachChange,
+                        value: saveOnEachChange,
                         onChanged: (_) => saveOnChangeToggle(),
                       ),
                       Text('Save On Change'),
@@ -93,7 +106,7 @@ class _PixelPageState extends State<PixelPage> {
                   title: Row(
                     children: [
                       Switch(
-                        value: context.watch<CanvasService>().showPreviousFrame,
+                        value: showPreviousFrame,
                         onChanged: (_) => toggleShowPreviousFrame(),
                       ),
                       Text('Show Previous Frame'),
@@ -126,11 +139,7 @@ class _PixelPageState extends State<PixelPage> {
               style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.resolveWith(
                       (states) => Colors.red)),
-              onPressed: () {
-                ScaffoldMessenger.of(context).clearSnackBars();
-                Provider.of<CanvasService>(context, listen: false)
-                    .clearCanvas();
-              },
+              onPressed: clearCanvasPressed,
               child: Icon(Icons.delete),
             ),
             ElevatedButton(onPressed: savePressed, child: Text('Save')),
@@ -143,13 +152,10 @@ class _PixelPageState extends State<PixelPage> {
                   minScale: 0.01,
                   maxScale: 50,
                   child: GestureDetector(
-                    onTapUp: (details) =>
-                        Provider.of<CanvasService>(context, listen: false)
-                            .tapUp(details.localPosition),
+                    onTapUp: handleCanvasTap,
                     child: CustomPaint(
                       size: Size(5000, 5000),
-                      painter: MyPainter(
-                          context.watch<CanvasService>().currentCanvas.dots),
+                      painter: MyPainter(service.currentCanvas.dots),
                     ),
                   ),
                 ),

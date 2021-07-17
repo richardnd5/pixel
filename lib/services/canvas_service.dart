@@ -59,7 +59,7 @@ class CanvasService extends ChangeNotifier {
     notifyListeners();
   }
 
-  tapUp(Offset localPosition) => _getDotAtPosition(localPosition);
+  checkTapPosition(Offset localPosition) => _getDotAtPosition(localPosition);
 
   _getDotAtPosition(Offset localPosition) {
     var foundDot = _currentCanvas.dots.firstWhere(
