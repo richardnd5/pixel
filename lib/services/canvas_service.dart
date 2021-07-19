@@ -9,6 +9,9 @@ class CanvasService extends ChangeNotifier {
 
   double get cellSize => _cellSize;
   late double _cellSize = 40;
+
+  double get gridWidth => _gridWidth;
+  double _gridWidth = 0.1;
   Color gridColor = Colors.lightBlue;
 
   List<Cell> get currentScreen => _currentScreen;
@@ -197,5 +200,6 @@ class CanvasService extends ChangeNotifier {
     }
     _playingAnimation = false;
     _showPreviousFrame = previousValue;
+    _canvasSaved = true;
   }
 }

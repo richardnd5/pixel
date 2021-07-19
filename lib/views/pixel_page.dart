@@ -13,7 +13,6 @@ class PixelPage extends StatefulWidget {
 }
 
 class _PixelPageState extends State<PixelPage> {
-  late SoundService sound;
   late CanvasService canvas;
   @override
   void initState() {
@@ -27,15 +26,13 @@ class _PixelPageState extends State<PixelPage> {
   savePressed() {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    var service = Provider.of<CanvasService>(context, listen: false);
-
-    var saved = service.saveCurrentCanvas();
+    var saved = canvas.saveCurrentCanvas();
     showSnackBar(context, saved ? 'Canvas Saved' : 'Already Saved');
 
-    if (service.showPreviousFrame) {
-      service.clearCanvas();
-      service.loadBlankCanvas();
-      service.drawPreviousCanvas();
+    if (canvas.showPreviousFrame) {
+      canvas.clearCanvas();
+      canvas.loadBlankCanvas();
+      canvas.drawPreviousCanvas();
     }
   }
 
@@ -44,8 +41,7 @@ class _PixelPageState extends State<PixelPage> {
   }
 
   toggleShowPreviousFrame() {
-    Provider.of<CanvasService>(context, listen: false)
-        .toggleShowPreviousFrame();
+    canvas.toggleShowPreviousFrame();
   }
 
   toggleGrid() {
@@ -54,7 +50,7 @@ class _PixelPageState extends State<PixelPage> {
 
   playPressed() {
     ScaffoldMessenger.of(context).clearSnackBars();
-    Provider.of<CanvasService>(context, listen: false).playArrayOfCanvases();
+    canvas.playArrayOfCanvases();
   }
 
   clearAnimationPressed() {
@@ -71,8 +67,7 @@ class _PixelPageState extends State<PixelPage> {
           TextButton(
             child: Text('Yes'),
             onPressed: () {
-              Provider.of<CanvasService>(context, listen: false)
-                  .clearAnimation();
+              canvas.clearAnimation();
               showSnackBar(context, 'Animation Cleared');
               Navigator.pop(context);
             },
@@ -84,12 +79,11 @@ class _PixelPageState extends State<PixelPage> {
 
   clearCanvasPressed() {
     ScaffoldMessenger.of(context).clearSnackBars();
-    Provider.of<CanvasService>(context, listen: false).clearCanvas();
+    canvas.clearCanvas();
   }
 
   handleCanvasTap(TapUpDetails details) {
-    Provider.of<CanvasService>(context, listen: false)
-        .checkTapPosition(details.localPosition);
+    canvas.checkTapPosition(details.localPosition);
   }
 
   @override
@@ -113,12 +107,11 @@ class _PixelPageState extends State<PixelPage> {
             child: GestureDetector(
               onTapUp: handleCanvasTap,
               child: CustomPaint(
-                size: Size(MediaQuery.of(context).size.width, 5000),
-                painter: CanvasPainter(
-                  service.currentScreen,
-                  gridToggle: grid,
-                  gridColor: service.gridColor,
-                ),
+                size: Size(5000, 5000),
+                painter: CanvasPainter(service.currentScreen,
+                    gridToggle: grid,
+                    gridColor: service.gridColor,
+                    gridWidth: service.gridWidth),
               ),
             ),
           ),
@@ -151,13 +144,17 @@ class _PixelPageState extends State<PixelPage> {
         child: Icon(Icons.delete),
       ),
       ElevatedButton(
-          onPressed: canvas.canvasSaved ? null : savePressed,
+          onPressed:
+              context.watch<CanvasService>().canvasSaved ? null : savePressed,
           child: Text('Save')),
     ];
   }
 
   Drawer _buildDrawer(
-      bool saveOnEachChange, bool showPreviousFrame, bool grid) {
+    bool saveOnEachChange,
+    bool showPreviousFrame,
+    bool grid,
+  ) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,

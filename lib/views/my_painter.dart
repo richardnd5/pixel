@@ -4,6 +4,7 @@ import 'package:pixel/models/cell.dart';
 class CanvasPainter extends CustomPainter {
   const CanvasPainter(
     this.cells, {
+    this.gridWidth = 0.2,
     this.gridToggle = false,
     this.gridColor = Colors.blue,
   });
@@ -11,10 +12,10 @@ class CanvasPainter extends CustomPainter {
   final List<Cell> cells;
   final bool gridToggle;
   final Color gridColor;
+  final double gridWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
-    var gridWidth = 0.1;
     cells.asMap().forEach((index, cell) {
       var paint = Paint();
       paint.strokeWidth = gridWidth;
