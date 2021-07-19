@@ -4,15 +4,20 @@ import 'package:pixel/models/cell.dart';
 import 'canvas_helper.dart';
 
 class CanvasService extends ChangeNotifier {
-  Size get canvasSize => _canvasSize;
-  Size _canvasSize = Size(20, 20);
+  Size get gridDimensions => _gridDimensions;
+  Size _gridDimensions = Size(50, 50);
 
   double get cellSize => _cellSize;
   late double _cellSize = 40;
 
-  double get gridWidth => _gridWidth;
-  double _gridWidth = 0.1;
-  Color gridColor = Colors.lightBlue;
+  Size get screenSize => _screenSize;
+  late Size _screenSize;
+
+  double get gridLineWidth => _gridLineWidth;
+  double _gridLineWidth = 0.1;
+  Color gridLineColor = Colors.lightBlue;
+
+  int currentSelectedIndex = 0;
 
   List<Cell> get currentScreen => _currentScreen;
   List<Cell> _currentScreen = [];
@@ -40,25 +45,34 @@ class CanvasService extends ChangeNotifier {
   bool get grid => _grid;
   bool _grid = true;
 
-  setCanvasSize(Size size, {double? squareSize}) {
+  startCanvasService(Size gridDimensions, Size screenSize) {
+    resetCanvasToScreenDimensions(gridDimensions, screenSize);
+    _canvasAnimation.add(_currentCells);
+  }
+
+  resetCanvasToScreenDimensions(Size gridDimensions, Size screenSize) {
     clearCanvas();
-    _canvasSize = size;
-    _cellSize = squareSize ?? _cellSize;
+    _screenSize = screenSize;
+    _gridDimensions = gridDimensions;
+    _cellSize = (screenSize.width / gridDimensions.width);
 
     var count = 0;
-    for (var i = 0; i < _canvasSize.width; i++) {
-      for (var v = 0; v < _canvasSize.height; v++) {
-        var xPos = ((_cellSize) * i).toDouble() + _cellSize;
-        var yPos = ((_cellSize) * v).toDouble() + _cellSize;
+    for (var i = 0; i < _gridDimensions.width; i++) {
+      for (var v = 0; v < _gridDimensions.height; v++) {
+        var xPos = i.toDouble();
+        var yPos = v.toDouble();
         var color = Colors.black;
 
         Offset gridPos = Offset(xPos, yPos);
-        _currentCells.add(Cell(
+        _currentCells.add(
+          Cell(
             color: color,
             gridPos: gridPos,
             on: false,
             number: count,
-            size: _cellSize));
+            size: _cellSize,
+          ),
+        );
         count++;
       }
     }
@@ -82,51 +96,30 @@ class CanvasService extends ChangeNotifier {
 
   checkTapPosition(Offset localPosition) => _getCellAtPosition(localPosition);
 
-  startCanvas() {
-    loadBlankCanvas();
-    _renderScreen();
-  }
-
   _getCellAtPosition(Offset localPosition) {
     var foundCell = _currentCells.firstWhere(
-        (cell) => tapWithinOffset(localPosition, cell.gridPos!, cellSize),
+        (cell) => tapWithinOffset(
+            localPosition,
+            Offset(cell.gridPos!.dx * cellSize, cell.gridPos!.dy * cellSize),
+            cellSize),
         orElse: () =>
             Cell(color: Colors.black, gridPos: null, on: false, number: 0));
     if (foundCell.gridPos != null) {
       foundCell.on = !foundCell.on;
       _canvasSaved = false;
-      if (saveOnEachChange) saveCurrentCanvas();
+      saveToCurrentSlot();
+      if (saveOnEachChange) saveAndIncrement();
       _renderScreen();
       notifyListeners();
     }
   }
 
   loadBlankCanvas() {
-    _loading = true;
-    notifyListeners();
-    _cellSize = cellSize;
-    var count = 0;
-    for (var i = 0; i < _canvasSize.width; i++) {
-      for (var v = 0; v < _canvasSize.height; v++) {
-        var xPos = ((cellSize) * i).toDouble() + cellSize;
-        var yPos = ((cellSize) * v).toDouble() + cellSize;
-        var color = Colors.black;
-
-        Offset gridPos = Offset(xPos, yPos);
-        _currentCells.add(Cell(
-            color: color,
-            gridPos: gridPos,
-            on: false,
-            number: count,
-            size: cellSize));
-        count++;
-      }
-    }
-    _loading = false;
+    resetCanvasToScreenDimensions(gridDimensions, screenSize);
   }
 
   drawPreviousCanvas() {
-    _previousCells = _canvasAnimation[_canvasAnimation.length - 1]
+    _previousCells = _canvasAnimation[currentSelectedIndex - 1]
         .map(
           (e) => Cell(
             color: e.color.withOpacity(0.3),
@@ -152,6 +145,8 @@ class CanvasService extends ChangeNotifier {
   clearCanvas() {
     _currentCells = [];
     _previousCells = [];
+    _currentScreen = [];
+    notifyListeners();
   }
 
   clearAnimation() {
@@ -164,27 +159,25 @@ class CanvasService extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool saveCurrentCanvas() {
+  bool saveAndIncrement() {
     if (!_canvasSaved && _currentCells.isNotEmpty) {
+      addCurrentCellsToAnimationArray();
       _canvasSaved = true;
-
-      final List<Cell> _secondList = _currentCells
-          .map<Cell>((e) => new Cell(
-                color: e.color,
-                gridPos: e.gridPos,
-                on: e.on,
-                number: e.number,
-                size: e.size,
-              ))
-          .toList();
-
-      _canvasAnimation.add(_secondList);
-      clearCanvas();
-      loadBlankCanvas();
-      _renderScreen();
+      makeNewFrame();
       return true;
     }
     return false;
+  }
+
+  saveToCurrentSlot() {
+    _canvasAnimation[currentSelectedIndex] = _currentCells;
+  }
+
+  makeNewFrame() {
+    currentSelectedIndex += 1;
+    clearCanvas();
+    loadBlankCanvas();
+    _renderScreen();
   }
 
   playArrayOfCanvases({
@@ -201,5 +194,46 @@ class CanvasService extends ChangeNotifier {
     _playingAnimation = false;
     _showPreviousFrame = previousValue;
     _canvasSaved = true;
+  }
+
+  goBackAFrame() {
+    saveToCurrentSlot();
+    if (_canvasAnimation.isNotEmpty && currentSelectedIndex > 0) {
+      currentSelectedIndex -= 1;
+      clearCanvas();
+      _currentCells = _canvasAnimation[currentSelectedIndex];
+      _renderScreen();
+      if (currentSelectedIndex - 1 > 0) {
+        _previousCells = _canvasAnimation[currentSelectedIndex - 1];
+        drawPreviousCanvas();
+        _renderScreen();
+      }
+    }
+  }
+
+  goForwardAFrame() {
+    saveToCurrentSlot();
+    if (_canvasAnimation.length - 1 > currentSelectedIndex) {
+      currentSelectedIndex += 1;
+      _currentCells = _canvasAnimation[currentSelectedIndex];
+      if (currentSelectedIndex > 0) {
+        _previousCells = _canvasAnimation[currentSelectedIndex - 1];
+        drawPreviousCanvas();
+      }
+      _renderScreen();
+    }
+  }
+
+  addCurrentCellsToAnimationArray() {
+    final List<Cell> _secondList = _currentCells
+        .map<Cell>((e) => new Cell(
+              color: e.color,
+              gridPos: e.gridPos,
+              on: e.on,
+              number: e.number,
+              size: e.size,
+            ))
+        .toList();
+    _canvasAnimation.add(_secondList);
   }
 }

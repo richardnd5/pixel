@@ -13,19 +13,21 @@ class PixelPage extends StatefulWidget {
 
 class _PixelPageState extends State<PixelPage> {
   late CanvasService canvas;
+
+  bool safetyLocked = true;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance!.addPostFrameCallback((_) {
       canvas = Provider.of<CanvasService>(context, listen: false);
-      canvas.startCanvas();
+      canvas.startCanvasService(Size(25, 25), MediaQuery.of(context).size);
     });
   }
 
   savePressed() {
     ScaffoldMessenger.of(context).clearSnackBars();
 
-    var saved = canvas.saveCurrentCanvas();
+    var saved = canvas.saveAndIncrement();
     showSnackBar(context, saved ? 'Canvas Saved' : 'Already Saved');
 
     if (canvas.showPreviousFrame) {
@@ -77,11 +79,18 @@ class _PixelPageState extends State<PixelPage> {
   }
 
   clearCanvasPressed() {
+    setState(() {
+      safetyLocked = true;
+    });
     ScaffoldMessenger.of(context).clearSnackBars();
-    canvas.clearCanvas();
+    canvas.resetCanvasToScreenDimensions(
+        canvas.gridDimensions, canvas.screenSize);
   }
 
   handleCanvasTap(TapUpDetails details) {
+    setState(() {
+      safetyLocked = true;
+    });
     canvas.checkTapPosition(details.localPosition);
   }
 
@@ -98,11 +107,42 @@ class _PixelPageState extends State<PixelPage> {
         child: Scaffold(
           drawer: _buildDrawer(saveOnEachChange, showPreviousFrame, grid),
           appBar: AppBar(),
+          floatingActionButton: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              SizedBox(width: 32),
+              ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.blue),
+                ),
+                onPressed: () => canvas.goBackAFrame(),
+                child: Icon(Icons.arrow_left_rounded),
+              ),
+              SizedBox(width: 16),
+              ElevatedButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.resolveWith(
+                      (states) => Colors.blue),
+                ),
+                onPressed: () => canvas.goForwardAFrame(),
+                child: Icon(Icons.arrow_right_rounded),
+              ),
+              Spacer(),
+              Container(
+                width: 100,
+                child: ElevatedButton(
+                  onPressed: context.watch<CanvasService>().canvasSaved
+                      ? null
+                      : savePressed,
+                  child: Text('Save'),
+                ),
+              ),
+            ],
+          ),
           persistentFooterButtons: _buildButtons(grid, context),
           body: InteractiveViewer(
-            // constrained: false,
-            // minScale: 0.01,
-            // maxScale: 50,
+            maxScale: 50,
             child: GestureDetector(
               onTapUp: handleCanvasTap,
               child: CustomPaint(
@@ -110,8 +150,10 @@ class _PixelPageState extends State<PixelPage> {
                 painter: CanvasPainter(
                   service.currentScreen,
                   gridToggle: grid,
-                  gridColor: service.gridColor,
-                  gridWidth: service.gridWidth,
+                  gridColor: service.gridLineColor,
+                  gridLineWidth: service.gridLineWidth,
+                  gridDimensions: service.gridDimensions,
+                  cellSize: service.cellSize,
                 ),
               ),
             ),
@@ -121,8 +163,30 @@ class _PixelPageState extends State<PixelPage> {
     );
   }
 
+  lockPressed() {
+    setState(() {
+      safetyLocked = !safetyLocked;
+    });
+  }
+
   List<Widget> _buildButtons(bool grid, BuildContext context) {
     return [
+      ElevatedButton(
+        style: ButtonStyle(
+            backgroundColor: MaterialStateProperty.resolveWith((states) =>
+                safetyLocked ? Colors.blueGrey : Colors.transparent)),
+        onPressed: lockPressed,
+        child: Icon(Icons.lock),
+      ),
+      ElevatedButton(
+        style: ButtonStyle(
+          backgroundColor: !safetyLocked
+              ? MaterialStateProperty.resolveWith((states) => Colors.red)
+              : null,
+        ),
+        onPressed: !safetyLocked ? clearCanvasPressed : null,
+        child: Icon(Icons.delete),
+      ),
       ElevatedButton(
         style: ButtonStyle(
             backgroundColor: MaterialStateProperty.resolveWith(
@@ -137,17 +201,6 @@ class _PixelPageState extends State<PixelPage> {
         onPressed: playPressed,
         child: Icon(Icons.play_arrow),
       ),
-      ElevatedButton(
-        style: ButtonStyle(
-            backgroundColor:
-                MaterialStateProperty.resolveWith((states) => Colors.red)),
-        onPressed: clearCanvasPressed,
-        child: Icon(Icons.delete),
-      ),
-      ElevatedButton(
-          onPressed:
-              context.watch<CanvasService>().canvasSaved ? null : savePressed,
-          child: Text('Save')),
     ];
   }
 
