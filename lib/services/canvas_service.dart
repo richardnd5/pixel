@@ -1,38 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:pixel/my_painter.dart';
+import 'package:pixel/models/canvas_model.dart';
+import 'package:pixel/models/cell.dart';
 
-class Canvas {
-  List<Dot> dots;
-  String name;
-  Color dotsColor;
-
-  Canvas({
-    required this.name,
-    required this.dots,
-    required this.dotsColor,
-  });
-
-  Canvas.clone(Canvas canvas)
-      : this.dots = canvas.dots
-            .map<Dot>((e) => new Dot(
-                  color: e.color,
-                  gridPos: e.gridPos,
-                  on: e.on,
-                  number: e.number,
-                  size: e.size,
-                ))
-            .toList(),
-        this.name = canvas.name,
-        this.dotsColor = canvas.dotsColor;
-}
+import 'canvas_helper.dart';
 
 class CanvasService extends ChangeNotifier {
-  Canvas get currentCanvas => _currentCanvas;
-  Canvas _currentCanvas =
-      Canvas(name: 'noodle', dots: [], dotsColor: Colors.black);
-  bool _canvasSaved = false;
-  double get squareSize => _squareSize;
-  late double _squareSize;
+  List<Cell> get currentScreen => _currentScreen;
+  List<Cell> _currentScreen = [];
+
+  List<Cell> _currentCells = [];
+  List<Cell> _previousCells = [];
 
   bool get playingAnimation => _playingAnimation;
   bool _playingAnimation = false;
@@ -40,14 +17,57 @@ class CanvasService extends ChangeNotifier {
   bool get loading => _loading;
   bool _loading = false;
 
-  List<Canvas> get savedCanvases => _savedCanvases;
-  List<Canvas> _savedCanvases = [];
+  bool get canvasSaved => _canvasSaved;
+  bool _canvasSaved = false;
+
+  List<List<Cell>> _canvasAnimation = [];
 
   bool get saveOnEachChange => _saveOnEachChange;
-  bool _saveOnEachChange = true;
+  bool _saveOnEachChange = false;
 
   bool get showPreviousFrame => _showPreviousFrame;
-  bool _showPreviousFrame = false;
+  bool _showPreviousFrame = true;
+
+  bool get grid => _grid;
+  bool _grid = true;
+
+  Color gridColor = Colors.lightBlue;
+
+  Size get canvasSize => _canvasSize;
+  Size _canvasSize = Size(2, 2);
+
+  double get cellSize => _cellSize;
+  late double _cellSize = 40;
+
+  setCanvasSize(Size size, {double? squareSize}) {
+    clearCanvas();
+    _canvasSize = size;
+    _cellSize = squareSize ?? _cellSize;
+
+    var count = 0;
+    for (var i = 0; i < _canvasSize.width; i++) {
+      for (var v = 0; v < _canvasSize.height; v++) {
+        var xPos = ((_cellSize) * i).toDouble() + _cellSize;
+        var yPos = ((_cellSize) * v).toDouble() + _cellSize;
+        var color = Colors.black;
+
+        Offset gridPos = Offset(xPos, yPos);
+        _currentCells.add(Cell(
+            color: color,
+            gridPos: gridPos,
+            on: false,
+            number: count,
+            size: _cellSize));
+        count++;
+      }
+    }
+    _renderScreen();
+  }
+
+  toggleGrid() {
+    _grid = !_grid;
+    notifyListeners();
+  }
 
   toggleShowPreviousFrame() {
     _showPreviousFrame = !_showPreviousFrame;
@@ -59,100 +79,125 @@ class CanvasService extends ChangeNotifier {
     notifyListeners();
   }
 
-  checkTapPosition(Offset localPosition) => _getDotAtPosition(localPosition);
+  checkTapPosition(Offset localPosition) => _getCellAtPosition(localPosition);
 
-  _getDotAtPosition(Offset localPosition) {
-    var foundDot = _currentCanvas.dots.firstWhere(
-        (dot) => tapWithinOffset(localPosition, dot.gridPos!, squareSize),
+  startCanvas() {
+    loadBlankCanvas();
+    _renderScreen();
+  }
+
+  _getCellAtPosition(Offset localPosition) {
+    var foundCell = _currentCells.firstWhere(
+        (cell) => tapWithinOffset(localPosition, cell.gridPos!, cellSize),
         orElse: () =>
-            Dot(color: Colors.black, gridPos: null, on: false, number: 0));
-    if (foundDot.gridPos != null) {
-      foundDot.on = !foundDot.on;
+            Cell(color: Colors.black, gridPos: null, on: false, number: 0));
+    if (foundCell.gridPos != null) {
+      foundCell.on = !foundCell.on;
       _canvasSaved = false;
       if (saveOnEachChange) saveCurrentCanvas();
-
+      _renderScreen();
       notifyListeners();
     }
   }
 
-  bool tapWithinOffset(Offset tapOffset, Offset offsetToCheck, double radius) =>
-      tapOffset.dx - radius <= offsetToCheck.dx &&
-      tapOffset.dx + radius >= offsetToCheck.dx &&
-      tapOffset.dy - radius <= offsetToCheck.dy &&
-      tapOffset.dy + radius >= offsetToCheck.dy;
-
-  createBlankCanvas({Size size = const Size(50, 50), double squareSize = 40}) {
+  loadBlankCanvas() {
     _loading = true;
     notifyListeners();
-    _squareSize = squareSize;
+    _cellSize = cellSize;
     var count = 0;
-    for (var i = 0; i < size.width; i++) {
-      for (var v = 0; v < size.height; v++) {
-        var xPos = ((squareSize) * i).toDouble() + squareSize;
-        var yPos = ((squareSize) * v).toDouble() + squareSize;
+    for (var i = 0; i < _canvasSize.width; i++) {
+      for (var v = 0; v < _canvasSize.height; v++) {
+        var xPos = ((cellSize) * i).toDouble() + cellSize;
+        var yPos = ((cellSize) * v).toDouble() + cellSize;
         var color = Colors.black;
 
         Offset gridPos = Offset(xPos, yPos);
-        _currentCanvas.dots.add(Dot(
+        _currentCells.add(Cell(
             color: color,
             gridPos: gridPos,
             on: false,
             number: count,
-            size: Size(squareSize, squareSize)));
+            size: cellSize));
         count++;
       }
     }
     _loading = false;
+  }
+
+  drawPreviousCanvas() {
+    _previousCells = _canvasAnimation[_canvasAnimation.length - 1]
+        .map(
+          (e) => Cell(
+            color: e.color.withOpacity(0.3),
+            gridPos: e.gridPos,
+            on: e.on,
+            number: e.number,
+            size: e.size,
+          ),
+        )
+        .toList();
+    _currentScreen.addAll(_previousCells);
+    notifyListeners();
+  }
+
+  _renderScreen() {
+    _currentScreen = [
+      ..._currentCells,
+      if (showPreviousFrame) ..._previousCells
+    ];
     notifyListeners();
   }
 
   clearCanvas() {
-    _currentCanvas = Canvas(
-      name: 'noodle',
-      dots: [],
-      dotsColor: Colors.black,
-    );
-    _canvasSaved = false;
-    createBlankCanvas();
-    notifyListeners();
+    _currentCells = [];
+    _previousCells = [];
   }
 
   clearAnimation() {
-    _currentCanvas = Canvas(
-      name: 'noodle',
-      dots: [],
-      dotsColor: Colors.black,
-    );
+    _currentCells = [];
     _canvasSaved = false;
-    _savedCanvases = [];
-    createBlankCanvas();
+    _canvasAnimation = [];
+    _previousCells = [];
+    loadBlankCanvas();
+    _renderScreen();
     notifyListeners();
   }
 
   bool saveCurrentCanvas() {
-    if (!_canvasSaved && _currentCanvas.dots.isNotEmpty) {
+    if (!_canvasSaved && _currentCells.isNotEmpty) {
       _canvasSaved = true;
 
-      var secondList = new Canvas.clone(_currentCanvas);
-      savedCanvases.add(secondList);
+      final List<Cell> _secondList = _currentCells
+          .map<Cell>((e) => new Cell(
+                color: e.color,
+                gridPos: e.gridPos,
+                on: e.on,
+                number: e.number,
+                size: e.size,
+              ))
+          .toList();
+
+      _canvasAnimation.add(_secondList);
+      clearCanvas();
+      loadBlankCanvas();
+      _renderScreen();
       return true;
     }
     return false;
   }
 
-  loadCanvas(List<Dot> canvas) {
-    _canvasSaved = false;
-    notifyListeners();
-  }
-
-  playArrayOfCanvases(
-      {Duration frameRate = const Duration(milliseconds: 100)}) async {
+  playArrayOfCanvases({
+    Duration frameRate = const Duration(milliseconds: 100),
+  }) async {
     _playingAnimation = true;
-    for (var canvas in _savedCanvases) {
-      _currentCanvas = canvas;
-      notifyListeners();
+    bool previousValue = _showPreviousFrame;
+    _showPreviousFrame = false;
+    for (var canvas in _canvasAnimation) {
+      _currentCells = canvas;
+      _renderScreen();
       await Future.delayed(frameRate);
     }
     _playingAnimation = false;
+    _showPreviousFrame = previousValue;
   }
 }

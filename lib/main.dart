@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:pixel/pixel_page.dart';
 import 'package:pixel/services/canvas_service.dart';
+import 'package:pixel/services/sound_service.dart';
+import 'package:pixel/views/pixel_page.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -14,8 +15,11 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(),
-      home: ChangeNotifierProvider(
-        create: (_) => CanvasService(),
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => SoundService()),
+          ChangeNotifierProvider(create: (_) => CanvasService())
+        ],
         child: PixelPage(),
       ),
     );
