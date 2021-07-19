@@ -133,13 +133,6 @@ class _PixelPageState extends State<PixelPage> {
         style: ButtonStyle(
             backgroundColor: MaterialStateProperty.resolveWith(
                 (states) => grid ? Colors.white10 : Colors.lightBlue)),
-        onPressed: () => canvas.setCanvasSize(Size(40, 40), squareSize: 1),
-        child: Icon(Icons.grid_4x4),
-      ),
-      ElevatedButton(
-        style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.resolveWith(
-                (states) => grid ? Colors.white10 : Colors.lightBlue)),
         onPressed: toggleGrid,
         child: Icon(Icons.grid_4x4),
       ),

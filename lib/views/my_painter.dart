@@ -20,6 +20,7 @@ class CanvasPainter extends CustomPainter {
       paint.strokeWidth = gridWidth;
       paint.color = cell.on ? cell.color : Colors.transparent;
       paint.style = PaintingStyle.fill;
+
       Rect rect = Offset(cell.gridPos!.dx, cell.gridPos!.dy) &
           Size(cell.size!, cell.size!);
       canvas.drawRect(rect, paint);

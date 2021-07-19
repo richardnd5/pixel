@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:pixel/models/canvas_model.dart';
 import 'package:pixel/models/cell.dart';
 
 import 'canvas_helper.dart';
 
 class CanvasService extends ChangeNotifier {
+  Size get canvasSize => _canvasSize;
+  Size _canvasSize = Size(20, 20);
+
+  double get cellSize => _cellSize;
+  late double _cellSize = 40;
+  Color gridColor = Colors.lightBlue;
+
   List<Cell> get currentScreen => _currentScreen;
   List<Cell> _currentScreen = [];
 
   List<Cell> _currentCells = [];
   List<Cell> _previousCells = [];
+
+  List<List<Cell>> _canvasAnimation = [];
 
   bool get playingAnimation => _playingAnimation;
   bool _playingAnimation = false;
@@ -20,8 +28,6 @@ class CanvasService extends ChangeNotifier {
   bool get canvasSaved => _canvasSaved;
   bool _canvasSaved = false;
 
-  List<List<Cell>> _canvasAnimation = [];
-
   bool get saveOnEachChange => _saveOnEachChange;
   bool _saveOnEachChange = false;
 
@@ -30,14 +36,6 @@ class CanvasService extends ChangeNotifier {
 
   bool get grid => _grid;
   bool _grid = true;
-
-  Color gridColor = Colors.lightBlue;
-
-  Size get canvasSize => _canvasSize;
-  Size _canvasSize = Size(2, 2);
-
-  double get cellSize => _cellSize;
-  late double _cellSize = 40;
 
   setCanvasSize(Size size, {double? squareSize}) {
     clearCanvas();
