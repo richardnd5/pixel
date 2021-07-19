@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pixel/services/canvas_service.dart';
-import 'package:pixel/services/sound_service.dart';
 import 'package:pixel/views/show_snack_bar.dart';
 import 'package:provider/provider.dart';
 import 'my_painter.dart';
@@ -101,17 +100,19 @@ class _PixelPageState extends State<PixelPage> {
           appBar: AppBar(),
           persistentFooterButtons: _buildButtons(grid, context),
           body: InteractiveViewer(
-            constrained: false,
-            minScale: 0.01,
-            maxScale: 50,
+            // constrained: false,
+            // minScale: 0.01,
+            // maxScale: 50,
             child: GestureDetector(
               onTapUp: handleCanvasTap,
               child: CustomPaint(
                 size: Size(5000, 5000),
-                painter: CanvasPainter(service.currentScreen,
-                    gridToggle: grid,
-                    gridColor: service.gridColor,
-                    gridWidth: service.gridWidth),
+                painter: CanvasPainter(
+                  service.currentScreen,
+                  gridToggle: grid,
+                  gridColor: service.gridColor,
+                  gridWidth: service.gridWidth,
+                ),
               ),
             ),
           ),
